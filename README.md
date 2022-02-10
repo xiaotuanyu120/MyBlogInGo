@@ -1,2 +1,2 @@
 # MyBlogInGo
-Rewrite my blog using Go
+Rewrite my blog generator in Go

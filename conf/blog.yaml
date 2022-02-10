@@ -1,0 +1,7 @@
+#baseDir: '/Users/user/Documents/github.com/xiaotuanyu120/MyBlogInGo'
+#baseDir is auto detected by this app
+#baseDir/bin/go_build
+
+# just put relative path of baseDir here
+srcDir: 'bin/myWritingDesk/markdown'
+dstDir: 'bin/myWritingDesk/html'
