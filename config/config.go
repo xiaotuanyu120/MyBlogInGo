@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	BaseDir string
-	SrcDir  string `mapstructure:"srcDir"`
-	DstDir  string `mapstructure:"dstDir"`
+	BaseDir     string
+	SrcDir      string `mapstructure:"srcDir"`
+	DstDir      string `mapstructure:"dstDir"`
+	ChromaStyle string `mapstructure:"chromaStyle"`
 }
 
 type viperConfParam struct {

@@ -51,9 +51,10 @@ var genCmd = &cobra.Command{
 			if md.MDInfo.Analysed {
 				// generate page
 				err = render.GeneratePage(md, &render.GenParam{
-					Latest: latest,
-					Index:  index,
-					DstDir: DstDir,
+					Latest:      latest,
+					Index:       index,
+					DstDir:      DstDir,
+					ChromaStyle: conf.ChromaStyle,
 				})
 				if err != nil {
 					log.Printf("Generate Page failed, error message: [%s]", err)
@@ -71,9 +72,10 @@ var genCmd = &cobra.Command{
 		})
 
 		err = render.GenerateHomePage(markdowns, &render.GenParam{
-			Latest: latest,
-			Index:  index,
-			DstDir: DstDir,
+			Latest:      latest,
+			Index:       index,
+			DstDir:      DstDir,
+			ChromaStyle: conf.ChromaStyle,
 		})
 		if err != nil {
 			log.Printf("Generate HomePage failed, error message: [%s]", err)

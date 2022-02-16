@@ -5,3 +5,5 @@
 # just put relative path of baseDir here
 srcDir: 'bin/myWritingDesk/markdown'
 dstDir: 'bin/myWritingDesk/html'
+
+chromaStyle: 'tango'

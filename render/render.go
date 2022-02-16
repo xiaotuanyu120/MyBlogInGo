@@ -17,9 +17,68 @@ import (
 )
 
 type GenParam struct {
-	Latest []byte
-	Index  PageIndex
-	DstDir string
+	Latest      []byte
+	Index       PageIndex
+	DstDir      string
+	ChromaStyle string
+}
+
+/*
+GenerateHomePage
+
+generate blog's home page
+*/
+func GenerateHomePage(mds Markdowns, param *GenParam) error {
+	// gen page summary
+	article, err := genHomePage(mds, param.ChromaStyle)
+	if err != nil {
+		return err
+	}
+	// render HTML with templates
+	sidebar := renderIndex(
+		&renderIndexParam{
+			index:   param.Index,
+			startBy: StartByCat,
+			stopBy:  StopByCat,
+		})
+	page := renderPage(&renderPageParam{
+		article: article,
+		sidebar: sidebar,
+		latest:  param.Latest,
+	})
+
+	// write Page
+	// create not existed destination directory
+	err = utils.CreateNonExistDir(param.DstDir)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(filepath.Join(param.DstDir, "/index.html"), page, 0644)
+	if err != nil {
+		return err
+	}
+	log.Println("Generate HomePage finish")
+
+	return nil
+}
+
+/*
+genHomePage
+
+get latest 10 summary of article, and generate these html
+*/
+func genHomePage(mds Markdowns, chromaStyle string) ([]byte, error) {
+	var homePage []byte
+	for _, md := range mds.subSlice(0, 10) {
+		// convert content to html
+		articleSummary, _, err := convertMDToStaticPage(md, chromaStyle)
+		if err != nil {
+			return nil, err
+		}
+		// render html with template
+		homePage = append(homePage, renderHomePage(articleSummary, md)...)
+	}
+	return homePage, nil
 }
 
 /*
@@ -30,7 +89,7 @@ GeneratePage
 */
 func GeneratePage(md *Markdown, param *GenParam) error {
 	// convert markdown to html and css
-	article, CSS, err := generateArticle(md)
+	article, CSS, err := generateArticle(md, param.ChromaStyle)
 	if err != nil {
 		return err
 	}
@@ -81,8 +140,8 @@ func GeneratePage(md *Markdown, param *GenParam) error {
 /*
 generateArticle
 */
-func generateArticle(md *Markdown) (article []byte, CSS []byte, err error) {
-	article, CSS, err = convertMDToStaticPage(md)
+func generateArticle(md *Markdown, chromaStyle string) (article []byte, CSS []byte, err error) {
+	article, CSS, err = convertMDToStaticPage(md, chromaStyle)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -225,6 +284,29 @@ func genSubCatIndexPage(param *GenParam, category, subCategory string) error {
 	return nil
 }
 
+/*
+renderHomePage
+
+render homepage's body part
+*/
+func renderHomePage(article []byte, md *Markdown) []byte {
+	// 1. BODY
+	var articleSummary []byte
+	// 1.2 ARTICLE
+	articleSummary = append(articleSummary, TPLArticleSummaryStart...)
+	articleSummary = append(
+		articleSummary,
+		fmt.Sprintf(
+			ArticleSummaryTitleFormatStr,
+			md.HTMLInfo.URI,
+			md.MDInfo.Header.Title,
+			md.MDInfo.Header.Date.Format(DateFormatLayout))...)
+	articleSummary = append(articleSummary, article...)
+	articleSummary = append(articleSummary, TPLArticleSummaryEnd...)
+
+	return articleSummary
+}
+
 type renderPageParam struct {
 	article     []byte
 	sidebar     []byte
@@ -298,9 +380,9 @@ convertMDToStaticPage
 
 convert markdown to html and css
 */
-func convertMDToStaticPage(md *Markdown) (HTML []byte, css []byte, err error) {
+func convertMDToStaticPage(md *Markdown, chromaStyle string) (HTML []byte, css []byte, err error) {
 	r := bfchroma.NewRenderer(
-		bfchroma.Style("github"),
+		bfchroma.Style(chromaStyle),
 		bfchroma.ChromaOptions(html.WithClasses(true)),
 	)
 
@@ -313,88 +395,9 @@ func convertMDToStaticPage(md *Markdown) (HTML []byte, css []byte, err error) {
 	HTML = blackfriday.Run(
 		[]byte(md.Content),
 		blackfriday.WithRenderer(r),
+		// https://github.com/russross/blackfriday/issues/693
+		blackfriday.WithExtensions(blackfriday.CommonExtensions|blackfriday.NoEmptyLineBeforeBlock),
 	)
 
 	return HTML, css, nil
-}
-
-/*
-GenerateHomePage
-
-generate blog's home page
-*/
-func GenerateHomePage(mds Markdowns, param *GenParam) error {
-	// gen page summary
-	article, err := genHomePage(mds)
-	if err != nil {
-		return err
-	}
-	// render HTML with templates
-	sidebar := renderIndex(
-		&renderIndexParam{
-			index:   param.Index,
-			startBy: StartByCat,
-			stopBy:  StopByCat,
-		})
-	page := renderPage(&renderPageParam{
-		article: article,
-		sidebar: sidebar,
-		latest:  param.Latest,
-	})
-
-	// write Page
-	// create not existed destination directory
-	err = utils.CreateNonExistDir(param.DstDir)
-	if err != nil {
-		return err
-	}
-	err = os.WriteFile(filepath.Join(param.DstDir, "/index.html"), page, 0644)
-	if err != nil {
-		return err
-	}
-	log.Println("Generate HomePage finish")
-
-	return nil
-}
-
-/*
-genHomePage
-
-get latest 10 summary of article, and generate these html
-*/
-func genHomePage(mds Markdowns) ([]byte, error) {
-	var homePage []byte
-	for _, md := range mds.subSlice(0, 10) {
-		// convert content to html
-		articleSummary, _, err := convertMDToStaticPage(md)
-		if err != nil {
-			return nil, err
-		}
-		// render html with template
-		homePage = append(homePage, renderHomePage(articleSummary, md)...)
-	}
-	return homePage, nil
-}
-
-/*
-renderHomePage
-
-render homepage's body part
-*/
-func renderHomePage(article []byte, md *Markdown) []byte {
-	// 1. BODY
-	var articleSummary []byte
-	// 1.2 ARTICLE
-	articleSummary = append(articleSummary, TPLArticleSummaryStart...)
-	articleSummary = append(
-		articleSummary,
-		fmt.Sprintf(
-			ArticleSummaryTitleFormatStr,
-			md.HTMLInfo.URI,
-			md.MDInfo.Header.Title,
-			md.MDInfo.Header.Date.Format(DateFormatLayout))...)
-	articleSummary = append(articleSummary, article...)
-	articleSummary = append(articleSummary, TPLArticleSummaryEnd...)
-
-	return articleSummary
 }
